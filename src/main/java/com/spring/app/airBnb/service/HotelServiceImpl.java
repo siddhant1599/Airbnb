@@ -1,6 +1,8 @@
 package com.spring.app.airBnb.service;
 
 import com.spring.app.airBnb.dto.HotelDto;
+import com.spring.app.airBnb.dto.HotelInfoDto;
+import com.spring.app.airBnb.dto.RoomDto;
 import com.spring.app.airBnb.entity.Hotel;
 import com.spring.app.airBnb.entity.Room;
 import com.spring.app.airBnb.exception.ResourceNotFoundException;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,5 +117,19 @@ public class HotelServiceImpl implements HotelService {
 
     }
 
+    @Override
+    public HotelInfoDto getHotelInfoById(Long hotelId) {
+
+        Hotel hotel = hotelRepository.findById(hotelId).orElseThrow( () -> {
+            return new ResourceNotFoundException("Hotel not found by id " + hotelId);
+        });
+
+        List<RoomDto> roomDtos = hotel.getRooms().stream()
+                .map(room -> modelMapper.map(room, RoomDto.class))
+                .toList();
+
+        return new HotelInfoDto(modelMapper.map(hotel, HotelDto.class), roomDtos);
+
+    }
 
 }

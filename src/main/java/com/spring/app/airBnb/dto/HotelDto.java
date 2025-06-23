@@ -16,8 +16,6 @@ public class HotelDto {
     private String[] photos;
     private String[] amenities;
     private HotelContactInfo hotelContactInfo;
-    @JsonIgnore
-    private List<Room> rooms;
     private Boolean active;
 
 }
