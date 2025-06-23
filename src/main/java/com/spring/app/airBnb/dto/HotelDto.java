@@ -1,5 +1,6 @@
 package com.spring.app.airBnb.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.spring.app.airBnb.entity.HotelContactInfo;
 import com.spring.app.airBnb.entity.Room;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class HotelDto {
     private String[] photos;
     private String[] amenities;
     private HotelContactInfo hotelContactInfo;
+    @JsonIgnore
     private List<Room> rooms;
     private Boolean active;
 

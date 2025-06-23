@@ -5,6 +5,7 @@ import com.spring.app.airBnb.entity.Hotel;
 import com.spring.app.airBnb.entity.Room;
 import com.spring.app.airBnb.exception.ResourceNotFoundException;
 import com.spring.app.airBnb.repository.HotelRepository;
+import com.spring.app.airBnb.repository.RoomRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class HotelServiceImpl implements HotelService {
     private final HotelRepository hotelRepository;
     private final ModelMapper modelMapper;
     private final InventoryService inventoryService;
+    private final RoomRepository  roomRepository;
 
 
     @Override
@@ -83,7 +85,8 @@ public class HotelServiceImpl implements HotelService {
         });
 
         for(Room room : hotel.getRooms()){
-            inventoryService.deleteFutureInventory(room);
+            inventoryService.deleteByRoom(room);
+            roomRepository.deleteById(room.getId());
         }
 
         hotelRepository.deleteById(id);

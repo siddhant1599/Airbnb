@@ -33,14 +33,13 @@ public class RoomServiceImpl implements RoomService{
         Hotel hotel = hotelRepository.findById(hotelId).orElseThrow( () -> {
             return new ResourceNotFoundException("Hotel not found by id " + hotelId);
         });
-        log.info("Creating a new Room with id : {}", roomDto.getId());
         Room room = modelMapper.map(roomDto, Room.class);
         room.setHotel(hotel);
 
         room = roomRepository.save(room);
-        log.info("Created a new Room with id : {}", roomDto.getId());
+        log.info("Created a new Room with id : {}", room.getId());
 
-        if(hotel.getActive() == true){
+        if(hotel.getActive()){
             inventoryService.initializeRoomForYear(room);
         }
 
@@ -82,7 +81,7 @@ public class RoomServiceImpl implements RoomService{
                 new ResourceNotFoundException("Room does not exist ith id -" + roomId)
         );
 
-        inventoryService.deleteFutureInventory(room);
+        inventoryService.deleteByRoom(room);
         roomRepository.deleteById(roomId);
 
         log.info("Deleted a Room with id : {}", roomId);
