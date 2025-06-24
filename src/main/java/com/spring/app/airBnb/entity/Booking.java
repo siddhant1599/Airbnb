@@ -2,20 +2,21 @@ package com.spring.app.airBnb.entity;
 
 import com.spring.app.airBnb.entity.enums.BookingStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Entity
 @Getter
 @Setter
-@Table
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Booking {
 
     @Id
@@ -38,10 +39,10 @@ public class Booking {
     private Integer roomCount;
 
     @Column(nullable = false)
-    private LocalDate checkOutTime;
+    private LocalDate checkOutDate;
 
     @Column(nullable = false)
-    private LocalDate checkInTime;
+    private LocalDate checkInDate;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -49,9 +50,8 @@ public class Booking {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_id")
-    private Payment payment;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
