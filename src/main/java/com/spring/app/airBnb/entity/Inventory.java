@@ -35,10 +35,10 @@ public class Inventory {
     private LocalDate date;
 
     @Column(nullable = false, columnDefinition = "INTEGER DEFAULT 0")
-    private Integer bookedCount;
+    private Integer bookedCount = 0;
 
     @Column(nullable = false, columnDefinition = "INTEGER DEFAULT 0")
-    private Integer reservedCount;
+    private Integer reservedCount = 0;
 
     @Column(nullable = false)
     private Integer totalCount;
@@ -47,7 +47,7 @@ public class Inventory {
     private BigDecimal surgeFactor;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price; //basePrice * surgeFactor
+    private BigDecimal price;
 
     @Column(nullable = false)
     private String city;

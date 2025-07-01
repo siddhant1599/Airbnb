@@ -1,5 +1,6 @@
 package com.spring.app.airBnb.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,6 +43,7 @@ public class Hotel {
     @Embedded
     private HotelContactInfo hotelContactInfo;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "hotel", fetch = FetchType.LAZY)
     private List<Room> rooms;
 
