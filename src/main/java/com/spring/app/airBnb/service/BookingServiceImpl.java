@@ -6,11 +6,13 @@ import com.spring.app.airBnb.dto.GuestDto;
 import com.spring.app.airBnb.entity.*;
 import com.spring.app.airBnb.entity.enums.BookingStatus;
 import com.spring.app.airBnb.exception.ResourceNotFoundException;
+import com.spring.app.airBnb.exception.UnauthorizedException;
 import com.spring.app.airBnb.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -88,9 +90,16 @@ public class BookingServiceImpl implements BookingService{
     @Override
     public BookingDto addGuests(Long bookingId, List<GuestDto> guestDtoList) {
 
+        log.info("Adding guests for booking with id : {}", bookingId);
+
+        User currentuser = getCurrentUser();
         Booking booking = bookingRepository.findById(bookingId).orElseThrow( () ->
                 new ResourceNotFoundException("Booking not found by id " + bookingId)
         );
+
+        if(!booking.getUser().equals(currentuser)){
+            throw new UnauthorizedException("User does not contain booking with id:" + bookingId);
+        }
 
         if(hasBookingExpired(booking)){
             throw new IllegalStateException("Booking has already expired : bookingId - " + booking.getId());
@@ -102,7 +111,7 @@ public class BookingServiceImpl implements BookingService{
         booking.setGuests(guestDtoList.stream().map((element) -> {
 
             Guest guest = modelMapper.map(element, Guest.class);
-            guest.setUser(getCurrentUser());
+            guest.setUser(currentuser);
             return guestRepository.save(guest);
         }).collect(Collectors.toSet())
         );
@@ -119,8 +128,6 @@ public class BookingServiceImpl implements BookingService{
     }
 
     private User getCurrentUser(){
-        User user = new User();
-        user.setId(2L);
-        return user;
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 }

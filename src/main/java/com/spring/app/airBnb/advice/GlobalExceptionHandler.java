@@ -1,10 +1,14 @@
 package com.spring.app.airBnb.advice;
 
 import com.spring.app.airBnb.exception.ResourceNotFoundException;
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.nio.file.AccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -23,6 +27,34 @@ public class GlobalExceptionHandler {
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .message(exception.getMessage())
+                .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<?>> handleAuthException(AuthenticationException ex){
+        ApiError apiError = ApiError.builder()
+                .message(ex.getLocalizedMessage())
+                .status(HttpStatus.UNAUTHORIZED)
+                .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<?>> handleJwtException(JwtException ex){
+        ApiError apiError = ApiError.builder()
+                .message(ex.getLocalizedMessage())
+                .status(HttpStatus.UNAUTHORIZED)
+                .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<?>> handleAccessDeniedException(AccessDeniedException ex){
+        ApiError apiError = ApiError.builder()
+                .message(ex.getLocalizedMessage())
+                .status(HttpStatus.FORBIDDEN)
                 .build();
         return buildErrorResponseEntity(apiError);
     }

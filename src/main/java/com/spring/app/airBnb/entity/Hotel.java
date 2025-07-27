@@ -23,7 +23,7 @@ public class Hotel {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     private User owner;
 
     private String city;
