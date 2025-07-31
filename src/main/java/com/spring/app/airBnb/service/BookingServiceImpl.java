@@ -8,10 +8,17 @@ import com.spring.app.airBnb.entity.enums.BookingStatus;
 import com.spring.app.airBnb.exception.ResourceNotFoundException;
 import com.spring.app.airBnb.exception.UnauthorizedException;
 import com.spring.app.airBnb.repository.*;
+import com.spring.app.airBnb.strategy.PricingService;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
+import com.stripe.model.Refund;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.RefundCreateParams;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +38,12 @@ public class BookingServiceImpl implements BookingService{
     private final HotelRepository hotelRepository;
     private final InventoryRepository inventoryRepository;
     private final GuestRepository guestRepository;
+    private final CheckoutService checkoutService;
     private final ModelMapper modelMapper;
+    private final PricingService pricingService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
 
 
@@ -64,13 +76,11 @@ public class BookingServiceImpl implements BookingService{
 
         //Reserve the room/ update the booked count of inventories
 
-        for(Inventory inventory : inventoryList){
-            inventory.setReservedCount(inventory.getReservedCount() + request.getRoomsCount());
-        }
+        inventoryRepository.initBooking(room.getId(), request.getCheckOutDate(), request.getCheckOutDate(), request.getRoomsCount());
 
-        inventoryRepository.saveAll(inventoryList);
 
-        //TODO : calculate dynamic price
+        BigDecimal priceForOneRoom = pricingService.calculateTotalPrice(inventoryList);
+        BigDecimal totalprice = priceForOneRoom.multiply(BigDecimal.valueOf(request.getRoomsCount()));
 
         Booking booking = Booking.builder()
                 .bookingStatus(BookingStatus.RESERVED)
@@ -80,11 +90,102 @@ public class BookingServiceImpl implements BookingService{
                 .checkInDate(request.getCheckInDate())
                 .checkOutDate(request.getCheckOutDate())
                 .roomCount(request.getRoomsCount())
-                .amount(BigDecimal.TEN)
+                .amount(totalprice)
                 .build();
 
         Booking booking1 = bookingRepository.save(booking);
         return modelMapper.map(booking1, BookingDto.class);
+    }
+
+    @Override
+    @Transactional
+    public String initiatePayments(Long bookingId) {
+
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                () ->  new ResourceNotFoundException("Booking not found by id : " + bookingId)
+        );
+
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if(!booking.getUser().equals(currentUser)){
+                throw new UnauthorizedException("User does not contain booking with id:" + bookingId);
+        }
+
+        if(hasBookingExpired(booking)){
+            throw new IllegalStateException("Booking has already expired with id - " + bookingId);
+        }
+
+       String sessionUrl = checkoutService.getCheckoutSession(booking, frontendUrl+"/payments/success", frontendUrl+"/payments/failure");
+
+        booking.setBookingStatus(BookingStatus.PAYMENT_PENDING);
+        bookingRepository.save(booking);
+
+        return sessionUrl;
+    }
+
+    @Override
+    @Transactional
+    public void capturePayment(Event event) {
+        if("checkout.session.completed".equals(event.getType())){
+
+            Session session = (Session)event.getDataObjectDeserializer().getObject().orElse(null);
+            if(session == null) return;
+
+            String sessionId = session.getId();
+            Booking booking = bookingRepository.findByPaymentSessionId(sessionId).orElseThrow(
+                    () -> new ResourceNotFoundException("Booking not found for session : " + sessionId)
+            );
+
+            booking.setBookingStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
+
+            inventoryRepository.findAndLockReservedInventory(booking.getRoom().getId(), booking.getCheckInDate(),booking.getCheckOutDate(), booking.getRoomCount());
+            inventoryRepository.confirmBooking(booking.getRoom().getId(), booking.getCheckInDate(), booking.getCheckOutDate(), booking.getRoomCount());
+
+            log.info("Successfully confirmed the booking for booking id : {}", booking.getId());
+        }
+        else{
+            log.warn("Unhandled event type : {}", event.getType());
+        }
+
+    }
+
+    @Override
+    @Transactional
+    public void cancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                () ->  new ResourceNotFoundException("Booking not found by id : " + bookingId)
+        );
+
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if(!booking.getUser().equals(currentUser)){
+            throw new UnauthorizedException("User does not contain booking with id:" + bookingId);
+        }
+
+        if(booking.getBookingStatus() != BookingStatus.CONFIRMED){
+            throw new IllegalStateException("Booking is not in confirmed status with id - " + bookingId);
+        }
+
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+
+        inventoryRepository.findAndLockReservedInventory(booking.getRoom().getId(), booking.getCheckInDate(),booking.getCheckOutDate(), booking.getRoomCount());
+        inventoryRepository.cancelBooking(booking.getRoom().getId(), booking.getCheckInDate(), booking.getCheckOutDate(), booking.getRoomCount());
+
+        // handle the refund
+
+        try{
+            Session session = Session.retrieve(booking.getPaymentSessionId());
+            RefundCreateParams refundCreateParams = RefundCreateParams.builder()
+                    .setPaymentIntent(session.getPaymentIntent())
+                    .build();
+
+            Refund.create(refundCreateParams);
+
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

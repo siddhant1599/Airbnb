@@ -24,7 +24,7 @@ public class JwtService {
                 .claim("email", user.getEmail())
                 .claim("roles", Set.of("ADMIN", "USER"))
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000*60))
+                .expiration(new Date(System.currentTimeMillis() + 1000*60*10))
                 .signWith(getSecretKey())
                 .compact();
 
