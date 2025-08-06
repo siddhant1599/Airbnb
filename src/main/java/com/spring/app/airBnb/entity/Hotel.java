@@ -44,7 +44,7 @@ public class Hotel {
     private HotelContactInfo hotelContactInfo;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "hotel", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "hotel", fetch = FetchType.EAGER)
     private List<Room> rooms;
 
     @Column(nullable = false)

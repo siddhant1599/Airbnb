@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.spring.app.airBnb.util.AppUtils.getCurrentUser;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -62,7 +64,9 @@ public class HotelServiceImpl implements HotelService {
     @Override
     public List<HotelDto> getAllHotels() {
 
-        List<Hotel> hotelList = hotelRepository.findAll();
+        User user = getCurrentUser();
+        log.info("Getting all hotels for the admin user : {}" ,user.getName());
+        List<Hotel> hotelList = hotelRepository.findByOwner(user);
         List<HotelDto> hotelDtoList = new ArrayList<>();
 
         hotelList.forEach(hotel -> {
