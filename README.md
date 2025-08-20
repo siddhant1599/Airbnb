@@ -168,7 +168,7 @@ public void updatePrices() {
 
 ## 🧠 Tech Stack
 
-- **Java **  
+- **Java**  
 - **Spring Boot**  
 - **Spring Security (JWT)**  
 - **Stripe API** – for handling payments  
